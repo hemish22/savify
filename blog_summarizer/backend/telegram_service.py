@@ -4,6 +4,8 @@ Telegram Bot Service — URL extraction, message formatting, and Telegram API he
 
 import os
 import re
+import asyncio
+
 import httpx
 from dotenv import load_dotenv
 
@@ -118,6 +120,55 @@ async def register_webhook(webhook_url: str) -> dict:
             json={"url": webhook_url, "allowed_updates": ["message"]}
         )
         return resp.json()
+
+
+async def delete_webhook() -> dict:
+    """Remove any registered webhook so getUpdates polling can be used."""
+    if not TELEGRAM_BOT_TOKEN:
+        return {"ok": False, "description": "TELEGRAM_BOT_TOKEN not set"}
+
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.post(f"{TELEGRAM_API_BASE}/deleteWebhook")
+        return resp.json()
+
+
+async def poll_updates(handle_message):
+    """
+    Long-poll Telegram getUpdates and dispatch each message to handle_message.
+    Used for local development where no public webhook URL exists.
+    Runs forever; cancel the task to stop.
+    """
+    if not TELEGRAM_BOT_TOKEN:
+        print("⚠️ TELEGRAM_BOT_TOKEN not set. Polling disabled.")
+        return
+
+    offset = 0
+    print("📡 Telegram polling started (local mode)")
+    async with httpx.AsyncClient(timeout=60) as client:
+        while True:
+            try:
+                resp = await client.get(
+                    f"{TELEGRAM_API_BASE}/getUpdates",
+                    params={"offset": offset, "timeout": 50, "allowed_updates": '["message"]'},
+                )
+                data = resp.json()
+                if not data.get("ok"):
+                    # 409 = webhook still registered; other errors — back off and retry
+                    print(f"⚠️ getUpdates error: {data.get('description')}")
+                    await asyncio.sleep(5)
+                    continue
+                for update in data.get("result", []):
+                    offset = update["update_id"] + 1
+                    message = update.get("message")
+                    if message:
+                        # Fire-and-forget so a slow summary doesn't block polling
+                        asyncio.create_task(handle_message(message))
+            except asyncio.CancelledError:
+                print("📡 Telegram polling stopped")
+                raise
+            except Exception as e:
+                print(f"⚠️ Telegram polling error: {e}")
+                await asyncio.sleep(5)
 
 
 async def get_bot_info() -> dict:
