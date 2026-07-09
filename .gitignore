@@ -6,8 +6,6 @@
 !/Dockerfile
 !/render.yaml
 !/.dockerignore
-!/docs/
-/docs/*.md
 
 # ── Junk rules (apply inside whitelisted folders too) ──
 

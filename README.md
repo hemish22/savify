@@ -19,7 +19,7 @@ You know the drill: 47 open tabs, 200 saved Instagram reels, a YouTube "Watch La
 
 | Homepage | Dashboard |
 |----------|-----------|
-| ![Homepage](docs/screenshots/homepage.png) | ![Dashboard](docs/screenshots/dashboard.png) |
+| ![Homepage](blog_summarizer/docs/screenshots/homepage.png) | ![Dashboard](blog_summarizer/docs/screenshots/dashboard.png) |
 
 ---
 
@@ -143,12 +143,12 @@ insta-reel-shorts-blogs-summariser-/
 │   │   ├── models.py               # Pydantic models
 │   │   ├── requirements.txt
 │   │   └── .env.example
-│   └── frontend/
-│       ├── index.html              # Homepage — URL input + live progress
-│       ├── dashboard.html          # Knowledge base UI
-│       ├── styles.css              # Design system (dark mode)
-│       └── script.js               # Filters, favorites, export, SSE client
-├── docs/screenshots/
+│   ├── frontend/
+│   │   ├── index.html              # Homepage — URL input + live progress
+│   │   ├── dashboard.html          # Knowledge base UI
+│   │   ├── styles.css              # Design system (dark mode)
+│   │   └── script.js               # Filters, favorites, export, SSE client
+│   └── docs/screenshots/
 ├── Dockerfile                      # Render deployment
 ├── render.yaml                     # Render blueprint
 └── README.md
