@@ -35,20 +35,33 @@ def download_audio(url: str) -> str:
 
     output_path = os.path.join(TEMP_DIR, f"{uuid.uuid4().hex}.wav")
 
+    cmd = [
+        "yt-dlp",
+        "--no-playlist",
+        "--extract-audio",
+        "--audio-format", "wav",
+        "--audio-quality", "0",
+        "--output", output_path.replace(".wav", ".%(ext)s"),
+        "--quiet",
+        "--no-warnings",
+        "--socket-timeout", "30",
+    ]
+
+    # Instagram increasingly requires login — pass cookies if configured.
+    # Only for IG URLs so YouTube downloads stay cookie-free.
+    if "instagram.com" in url:
+        cookies_browser = os.getenv("YTDLP_COOKIES_FROM_BROWSER", "")
+        cookies_file = os.getenv("YTDLP_COOKIES_FILE", "")
+        if cookies_browser:
+            cmd += ["--cookies-from-browser", cookies_browser]
+        elif cookies_file and os.path.exists(cookies_file):
+            cmd += ["--cookies", cookies_file]
+
+    cmd.append(url)
+
     try:
         result = subprocess.run(
-            [
-                "yt-dlp",
-                "--no-playlist",
-                "--extract-audio",
-                "--audio-format", "wav",
-                "--audio-quality", "0",
-                "--output", output_path.replace(".wav", ".%(ext)s"),
-                "--quiet",
-                "--no-warnings",
-                "--socket-timeout", "30",
-                url,
-            ],
+            cmd,
             capture_output=True,
             text=True,
             timeout=120,  # 2 min max for download
@@ -56,6 +69,12 @@ def download_audio(url: str) -> str:
 
         if result.returncode != 0:
             error_msg = result.stderr.strip()
+            if "login required" in error_msg or "rate-limit reached" in error_msg:
+                raise RuntimeError(
+                    "Instagram wants a login for this content. Set "
+                    "YTDLP_COOKIES_FROM_BROWSER (e.g. 'chrome') in .env so "
+                    "yt-dlp can use your browser's Instagram session."
+                )
             if "Private video" in error_msg or "Sign in" in error_msg:
                 raise RuntimeError("This video is private or requires login.")
             if "not a valid URL" in error_msg:
