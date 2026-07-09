@@ -2,7 +2,10 @@
  * Blog Summarizer — Frontend Logic
  */
 
-const API_BASE = '';
+// Same-origin when served by FastAPI; Render backend when hosted on Vercel
+const API_BASE = location.hostname.endsWith('.vercel.app')
+    ? 'https://insta-reel-shorts-blogs-summariser.onrender.com'
+    : '';
 
 // In-memory state for dashboard
 let allSummaries = [];
