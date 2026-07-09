@@ -1,4 +1,4 @@
-# 🧠 Reelist — Insta Reel, YouTube & Blog Summarizer
+# Reelist — Insta Reel, YouTube & Blog Summarizer
 
 > **Stop hoarding tabs and saved reels you'll never rewatch.**
 
@@ -6,16 +6,16 @@ You know the drill: 47 open tabs, 200 saved Instagram reels, a YouTube "Watch La
 
 **This fixes that.** Paste any URL — a blog post, a YouTube video, an Instagram reel — and in seconds you get a structured AI summary: key points, difficulty rating, tools mentioned, and the one takeaway that matters. Everything lands in a searchable personal knowledge base. On your phone? Just share the link to your Telegram bot and the summary comes right back in chat.
 
-- ⚡ **Fast** — summaries powered by `gpt-oss-120b` on Groq (fastest inference on the market)
-- 🎙️ **No captions? No problem** — reels and caption-less videos get transcribed locally with Whisper
-- 📱 **Zero-friction mobile** — share from Instagram → Telegram bot → summarized, saved, done
-- 🔒 **Yours** — SQLite on your machine, your API keys, no third-party tracking
+- **Fast** — summaries powered by `gpt-oss-120b` on Groq (fastest inference on the market)
+- **No captions? No problem** — reels and caption-less videos get transcribed locally with Whisper
+- **Zero-friction mobile** — share from Instagram to your Telegram bot: summarized, saved, done
+- **Yours** — SQLite on your machine, your API keys, no third-party tracking
 
 **Built with:** Python · FastAPI · Groq (gpt-oss-120b) · faster-whisper · SQLite · Vanilla JS
 
 ---
 
-## 📸 Screenshots
+## Screenshots
 
 | Homepage | Dashboard |
 |----------|-----------|
@@ -23,35 +23,35 @@ You know the drill: 47 open tabs, 200 saved Instagram reels, a YouTube "Watch La
 
 ---
 
-## ✨ Features
+## Features
 
-### 🚀 Universal Summarization
+### Universal Summarization
 - **Blogs & Articles** — Scrapes any webpage with BeautifulSoup, strips the junk, summarizes the content.
 - **YouTube Videos** — Fetches transcripts via the YouTube Transcript API. No transcript? Falls back to downloading the audio with `yt-dlp` and transcribing locally with **faster-whisper**.
 - **Instagram Reels** — Downloads reel audio, transcribes with Whisper, summarizes.
 
-### ⏱️ Real-Time Progress
-- Live SSE (Server-Sent Events) stepper shows every stage: detection → scraping/downloading → transcription → AI summary → saved.
+### Real-Time Progress
+- Live SSE (Server-Sent Events) stepper shows every stage: detection, scraping/downloading, transcription, AI summary, saved.
 
-### 🗂️ Smart Knowledge Base
+### Smart Knowledge Base
 - **AI Categorization** — auto-tagged into AI, Web Dev, ML, Cybersecurity, or General.
 - **Difficulty Scoring** — Beginner / Intermediate / Advanced.
 - **Smart Search** — across titles, summaries, key points, and tools mentioned.
 - **Sorting & Filters** — by date, difficulty, title, category, or source domain.
 
-### ⭐ Personalization & Export
+### Personalization & Export
 - **Favorites** — star summaries, filter to favorites only.
 - **Manual Editing** — refine any AI summary; edits get an "Edited" badge.
 - **Export** — copy as Markdown or download `.md` for Notion / Obsidian.
 
-### 🤖 Telegram Bot
+### Telegram Bot
 - **Share from anywhere** — send any URL to your bot, get the summary back in chat.
 - **Works locally out of the box** — long-polling mode means **no ngrok, no webhook setup** for local dev.
 - **Same knowledge base** — bot summaries appear on your dashboard too.
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -86,11 +86,11 @@ cp .env.example .env
 Edit `blog_summarizer/backend/.env`:
 
 ```env
-GROQ_API_KEY=gsk_your_actual_key_here          # required
-TELEGRAM_BOT_TOKEN=123456:ABC-your_token_here  # optional — only for the Telegram bot
+GROQ_API_KEY=gsk_your_actual_key_here # required
+TELEGRAM_BOT_TOKEN=123456:ABC-your_token_here # optional — only for the Telegram bot
 ```
 
-> 🔒 `.env` is git-ignored. Your keys never leave your machine.
+> `.env` is git-ignored. Your keys never leave your machine.
 
 ### 4. Run
 
@@ -107,7 +107,7 @@ uvicorn main:app --reload
 
 ### 6. (Optional) Telegram bot — 2 minutes, no ngrok
 
-1. Message **@BotFather** on Telegram → `/newbot` → copy the token
+1. Message **@BotFather** on Telegram, send `/newbot`, copy the token
 2. Put it in `.env` as `TELEGRAM_BOT_TOKEN`
 3. Restart the server — that's it
 
@@ -115,7 +115,7 @@ The server auto-detects local mode and uses **long-polling**: no public URL, no 
 
 ---
 
-## ☁️ Deployment
+## Deployment
 
 | Piece | Where | How |
 |-------|-------|-----|
@@ -124,7 +124,7 @@ The server auto-detects local mode and uses **long-polling**: no public URL, no 
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 insta-reel-shorts-blogs-summariser-/
@@ -156,7 +156,7 @@ insta-reel-shorts-blogs-summariser-/
 
 ---
 
-## 🔌 API Endpoints
+## API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -194,20 +194,20 @@ curl -X POST http://localhost:8000/summarize \
 
 ---
 
-## ⚙️ Configuration Reference
+## Configuration Reference
 
 All config lives in `blog_summarizer/backend/.env`:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GROQ_API_KEY` | ✅ | Free key from [console.groq.com/keys](https://console.groq.com/keys) |
-| `TELEGRAM_BOT_TOKEN` | ❌ | From [@BotFather](https://t.me/BotFather) — only for Telegram integration |
+| `GROQ_API_KEY` | Yes | Free key from [console.groq.com/keys](https://console.groq.com/keys) |
+| `TELEGRAM_BOT_TOKEN` | No | From [@BotFather](https://t.me/BotFather) — only for Telegram integration |
 
 > SQLite needs zero config. Whisper models download on first use.
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
@@ -220,12 +220,12 @@ All config lives in `blog_summarizer/backend/.env`:
 
 ---
 
-## 📝 License
+## License
 
 MIT — free for personal and commercial use.
 
 ---
 
 <p align="center">
-  Built with ❤️ by <a href="https://github.com/hemish22">hemish22</a>
+  Built by <a href="https://github.com/hemish22">hemish22</a>
 </p>
