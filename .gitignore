@@ -1,3 +1,16 @@
+# ── Whitelist: ignore everything at repo root except the app and README ──
+/*
+!/blog_summarizer/
+!/README.md
+!/.gitignore
+!/Dockerfile
+!/render.yaml
+!/.dockerignore
+!/docs/
+/docs/*.md
+
+# ── Junk rules (apply inside whitelisted folders too) ──
+
 # Python
 __pycache__/
 *.py[cod]
@@ -6,19 +19,9 @@ __pycache__/
 .Python
 env/
 build/
-develop-eggs/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
 wheels/
 *.egg-info/
-.installed.cfg
 *.egg
 
 # Database
@@ -33,26 +36,14 @@ ENV/
 
 # OS
 .DS_Store
-.DS_Store?
 ._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
 # IDEs
 .vscode/
 .idea/
 
-# Agentic / Internal tooling
-.agent/
-.gemini/
-.gsd/
-/tmp/
-
-# Project-specific
-GSD-STYLE.md
-PROJECT_RULES.md
-model_capabilities.yaml
-adapters/
-scripts/
+# Tooling artifacts
+.vercel/
+.pytest_cache/
+graphify-out/

@@ -1,8 +1,17 @@
-# 🧠 Insta Reel, YouTube Shorts & Blog Summarizer
+# 🧠 Reelist — Insta Reel, YouTube & Blog Summarizer
 
-> Paste any URL — Blog, YouTube video, or Instagram Reel — and get a structured AI summary in seconds. All summaries are saved locally in a personal knowledge base you can search, filter, edit, and export.
+> **Stop hoarding tabs and saved reels you'll never rewatch.**
 
-**Built with:** Python · FastAPI · Google Gemini API · SQLite · Vanilla JS
+You know the drill: 47 open tabs, 200 saved Instagram reels, a YouTube "Watch Later" that's basically a graveyard. You *saved* all that knowledge — you just never get it back out.
+
+**This fixes that.** Paste any URL — a blog post, a YouTube video, an Instagram reel — and in seconds you get a structured AI summary: key points, difficulty rating, tools mentioned, and the one takeaway that matters. Everything lands in a searchable personal knowledge base. On your phone? Just share the link to your Telegram bot and the summary comes right back in chat.
+
+- ⚡ **Fast** — summaries powered by `gpt-oss-120b` on Groq (fastest inference on the market)
+- 🎙️ **No captions? No problem** — reels and caption-less videos get transcribed locally with Whisper
+- 📱 **Zero-friction mobile** — share from Instagram → Telegram bot → summarized, saved, done
+- 🔒 **Yours** — SQLite on your machine, your API keys, no third-party tracking
+
+**Built with:** Python · FastAPI · Groq (gpt-oss-120b) · faster-whisper · SQLite · Vanilla JS
 
 ---
 
@@ -17,32 +26,28 @@
 ## ✨ Features
 
 ### 🚀 Universal Summarization
-- **Blogs & Articles** — Scrapes any webpage using BeautifulSoup and summarizes the content.
-- **YouTube Videos** — Fetches transcripts via the YouTube Transcript API. If no transcript is available, it falls back to downloading the audio with `yt-dlp` and transcribing it locally with **OpenAI Whisper**.
-- **Instagram Reels** — Downloads reel audio via `yt-dlp`, transcribes with Whisper, and summarizes.
+- **Blogs & Articles** — Scrapes any webpage with BeautifulSoup, strips the junk, summarizes the content.
+- **YouTube Videos** — Fetches transcripts via the YouTube Transcript API. No transcript? Falls back to downloading the audio with `yt-dlp` and transcribing locally with **faster-whisper**.
+- **Instagram Reels** — Downloads reel audio, transcribes with Whisper, summarizes.
 
 ### ⏱️ Real-Time Progress
-- A live SSE (Server-Sent Events) stepper shows each stage: URL detection → scraping/downloading → transcription → AI summarization → saved.
+- Live SSE (Server-Sent Events) stepper shows every stage: detection → scraping/downloading → transcription → AI summary → saved.
 
 ### 🗂️ Smart Knowledge Base
-- **AI Categorization** — Each summary is automatically tagged into a domain (AI, Web Dev, ML, etc.).
-- **Difficulty Scoring** — Summaries are rated as Beginner, Intermediate, or Advanced.
-- **Smart Search** — Search across titles, summaries, key points, and tools mentioned.
-- **Sorting** — Sort by date, difficulty, title, or category.
-- **Domain Filters** — Filter by source (youtube.com, instagram.com, etc.).
+- **AI Categorization** — auto-tagged into AI, Web Dev, ML, Cybersecurity, or General.
+- **Difficulty Scoring** — Beginner / Intermediate / Advanced.
+- **Smart Search** — across titles, summaries, key points, and tools mentioned.
+- **Sorting & Filters** — by date, difficulty, title, category, or source domain.
 
-### ⭐ Personalization
-- **Favorites** — Star important summaries and filter to show favorites only.
-- **Manual Editing** — Edit any AI-generated summary to add your own notes or corrections. Edited summaries are marked with an "Edited" badge.
-
-### 📤 Export
-- **Copy to Clipboard** — One click copies a neatly formatted Markdown version.
-- **Download as `.md`** — Download any summary as a Markdown file for use in Notion, Obsidian, etc.
+### ⭐ Personalization & Export
+- **Favorites** — star summaries, filter to favorites only.
+- **Manual Editing** — refine any AI summary; edits get an "Edited" badge.
+- **Export** — copy as Markdown or download `.md` for Notion / Obsidian.
 
 ### 🤖 Telegram Bot
-- **Mobile Ingestion** — Share any URL from your phone to a Telegram Bot and it auto-summarizes.
-- **Commands** — `/start` (welcome), `/help` (usage), or just paste a URL.
-- **Same Knowledge Base** — Summaries land on your dashboard alongside web-submitted ones.
+- **Share from anywhere** — send any URL to your bot, get the summary back in chat.
+- **Works locally out of the box** — long-polling mode means **no ngrok, no webhook setup** for local dev.
+- **Same knowledge base** — bot summaries appear on your dashboard too.
 
 ---
 
@@ -50,92 +55,72 @@
 
 ### Prerequisites
 
-| Requirement     | Details                                                                                                   |
-|-----------------|-----------------------------------------------------------------------------------------------------------|
-| **Python**      | 3.9 or higher                                                                                             |
-| **ffmpeg**      | Required for audio processing. Install via `brew install ffmpeg` (macOS) or `sudo apt install ffmpeg` (Linux). |
-| **Gemini API Key** | Free from [Google AI Studio](https://aistudio.google.com/apikey)                                       |
+| Requirement | Details |
+|-------------|---------|
+| **Python** | 3.9+ |
+| **ffmpeg** | Audio processing. `brew install ffmpeg` (macOS) / `sudo apt install ffmpeg` (Linux) |
+| **Groq API Key** | Free at [console.groq.com/keys](https://console.groq.com/keys) |
 
-### 1. Clone the Repository
+### 1. Clone
 
 ```bash
 git clone https://github.com/hemish22/insta-reel-shorts-blogs-summariser-.git
 cd insta-reel-shorts-blogs-summariser-
 ```
 
-### 2. Install Python Dependencies
+### 2. Install dependencies
 
 ```bash
 cd blog_summarizer/backend
 pip install -r requirements.txt
 ```
 
-> **Note:** The `openai-whisper` package will download the Whisper model (~140 MB) on first use. This is automatic.
+> faster-whisper downloads its model (~75 MB, `tiny`) automatically on first transcription.
 
-### 3. Configure Your API Key
-
-Create a `.env` file inside the `blog_summarizer/backend/` directory:
+### 3. Configure API keys
 
 ```bash
 cp .env.example .env
 ```
 
-Then open `blog_summarizer/backend/.env` and replace the placeholder with your actual key:
+Edit `blog_summarizer/backend/.env`:
 
 ```env
-GEMINI_API_KEY=your_actual_gemini_api_key_here
+GROQ_API_KEY=gsk_your_actual_key_here          # required
+TELEGRAM_BOT_TOKEN=123456:ABC-your_token_here  # optional — only for the Telegram bot
 ```
 
-> ⚠️ **Important:** The `.env` file is listed in `.gitignore` and will **never** be pushed to GitHub. Your API key stays on your machine only.
+> 🔒 `.env` is git-ignored. Your keys never leave your machine.
 
-### 4. Run the Application
+### 4. Run
 
 ```bash
-# Make sure you are inside blog_summarizer/backend/
 uvicorn main:app --reload
 ```
 
-### 5. Open in Your Browser
+### 5. Open
 
-| Page       | URL                                      |
-|------------|------------------------------------------|
-| Homepage   | [http://localhost:8000](http://localhost:8000)         |
-| Dashboard  | [http://localhost:8000/dashboard](http://localhost:8000/dashboard) |
+| Page | URL |
+|------|-----|
+| Homepage | [http://localhost:8000](http://localhost:8000) |
+| Dashboard | [http://localhost:8000/dashboard](http://localhost:8000/dashboard) |
 
-### 6. (Optional) Connect Telegram Bot
+### 6. (Optional) Telegram bot — 2 minutes, no ngrok
 
-This lets you share URLs directly from your phone.
+1. Message **@BotFather** on Telegram → `/newbot` → copy the token
+2. Put it in `.env` as `TELEGRAM_BOT_TOKEN`
+3. Restart the server — that's it
 
-**Step A — Create a Telegram Bot:**
-1. Open Telegram and search for **@BotFather**
-2. Send `/newbot` and follow the prompts
-3. Copy the **Bot Token** you receive (looks like `123456:ABC-XYZ...`)
+The server auto-detects local mode and uses **long-polling**: no public URL, no webhook, no tunnel. Send your bot any link and watch the summary come back. (When deployed to Render, it automatically switches to webhook mode instead.)
 
-**Step B — Add token to `.env`:**
-```env
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
-```
+---
 
-**Step C — Expose your server (for local dev):**
-```bash
-# Install ngrok (one-time)
-brew install ngrok   # macOS
-# or: snap install ngrok   # Linux
+## ☁️ Deployment
 
-# Start tunnel
-ngrok http 8000
-```
-
-**Step D — Register webhook:**
-
-Open this URL in your browser (replace with your ngrok URL):
-```
-http://localhost:8000/telegram-setup?webhook_url=https://xxxx.ngrok-free.app
-```
-
-**That's it!** Now send any URL to your bot on Telegram → it summarizes and saves to your dashboard.
-
-> 💡 **For production:** Deploy to Render/Railway and use your public domain as the webhook URL instead of ngrok.
+| Piece | Where | How |
+|-------|-------|-----|
+| **Backend** | Render | `render.yaml` blueprint included — connect the repo, set `GROQ_API_KEY` + `TELEGRAM_BOT_TOKEN` in the dashboard. Telegram webhook registers itself on boot. |
+| **Frontend** | Vercel | `blog_summarizer/frontend/` deploys as a static site; it auto-points API calls at the Render backend when served from a `*.vercel.app` domain. |
 
 ---
 
@@ -145,49 +130,48 @@ http://localhost:8000/telegram-setup?webhook_url=https://xxxx.ngrok-free.app
 insta-reel-shorts-blogs-summariser-/
 ├── blog_summarizer/
 │   ├── backend/
-│   │   ├── main.py                 # FastAPI app, routes, SSE streaming
+│   │   ├── main.py                 # FastAPI app, routes, SSE streaming, Telegram handling
+│   │   ├── llm_service.py          # Groq (gpt-oss-120b) integration + robust JSON parsing
 │   │   ├── scraper.py              # Blog/article scraping (BeautifulSoup)
-│   │   ├── gemini_service.py       # Google Gemini API integration
-│   │   ├── youtube_service.py      # YouTube transcript fetching + Whisper fallback
-│   │   ├── instagram_service.py    # Instagram Reel detection + audio download
+│   │   ├── youtube_service.py      # YouTube transcripts + Whisper fallback
+│   │   ├── instagram_service.py    # Instagram Reel detection + transcription
 │   │   ├── audio_service.py        # yt-dlp audio downloading
-│   │   ├── whisper_service.py      # OpenAI Whisper transcription
-│   │   ├── transcript_cleaner.py   # Filler word removal, text cleanup
-│   │   ├── database.py             # SQLite schema, migrations, CRUD
-│   │   ├── models.py               # Pydantic request/response models
-│   │   ├── telegram_service.py     # Telegram Bot API helpers
-│   │   ├── requirements.txt        # Python dependencies
-│   │   ├── .env.example            # Template for API key configuration
-│   │   └── .env                    # Your actual API key (git-ignored)
+│   │   ├── whisper_service.py      # faster-whisper transcription
+│   │   ├── transcript_cleaner.py   # Filler-word removal, text cleanup
+│   │   ├── telegram_service.py     # Bot API helpers: polling, webhook, formatting
+│   │   ├── database.py             # SQLite schema + CRUD
+│   │   ├── models.py               # Pydantic models
+│   │   ├── requirements.txt
+│   │   └── .env.example
 │   └── frontend/
-│       ├── index.html              # Homepage — URL input + progress stepper
-│       ├── dashboard.html          # Dashboard — Knowledge base UI
-│       ├── styles.css              # Full design system (dark mode)
-│       └── script.js               # All frontend logic (filters, favorites, export)
-├── docs/
-│   └── screenshots/                # README screenshots
-├── .gitignore                      # Prevents secrets, databases, caches from being pushed
-└── README.md                       # This file
+│       ├── index.html              # Homepage — URL input + live progress
+│       ├── dashboard.html          # Knowledge base UI
+│       ├── styles.css              # Design system (dark mode)
+│       └── script.js               # Filters, favorites, export, SSE client
+├── docs/screenshots/
+├── Dockerfile                      # Render deployment
+├── render.yaml                     # Render blueprint
+└── README.md
 ```
 
 ---
 
 ## 🔌 API Endpoints
 
-| Method   | Endpoint                          | Description                           |
-|----------|-----------------------------------|---------------------------------------|
-| `GET`    | `/`                               | Serves the homepage                   |
-| `GET`    | `/dashboard`                      | Serves the dashboard                  |
-| `POST`   | `/summarize-stream`              | Summarize a URL with real-time SSE progress |
-| `POST`   | `/summarize`                     | Summarize a URL (legacy, non-streaming) |
-| `GET`    | `/summaries`                      | Get all saved summaries               |
-| `DELETE` | `/summaries/{id}`                 | Delete a summary                      |
-| `POST`   | `/summaries/{id}/favorite`       | Toggle favorite status                |
-| `PUT`    | `/summaries/{id}/edit`           | Update summary text (manual edit)     |
-| `POST`   | `/telegram-webhook`              | Telegram Bot webhook (auto-called by Telegram) |
-| `GET`    | `/telegram-setup`                | Register webhook URL with Telegram    |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/` | Homepage |
+| `GET` | `/dashboard` | Dashboard |
+| `POST` | `/summarize-stream` | Summarize with real-time SSE progress |
+| `POST` | `/summarize` | Summarize (non-streaming) |
+| `GET` | `/summaries` | All saved summaries |
+| `DELETE` | `/summaries/{id}` | Delete a summary |
+| `POST` | `/summaries/{id}/favorite` | Toggle favorite |
+| `PUT` | `/summaries/{id}/edit` | Edit summary text |
+| `POST` | `/telegram-webhook` | Telegram webhook (production mode) |
+| `GET` | `/telegram-setup` | Manual webhook registration helper |
 
-### Example: Summarize a URL
+### Example
 
 ```bash
 curl -X POST http://localhost:8000/summarize \
@@ -195,7 +179,6 @@ curl -X POST http://localhost:8000/summarize \
   -d '{"url": "https://example.com/some-article"}'
 ```
 
-**Response:**
 ```json
 {
   "title": "Article Title",
@@ -213,42 +196,33 @@ curl -X POST http://localhost:8000/summarize \
 
 ## ⚙️ Configuration Reference
 
-All configuration is done through the `.env` file in `blog_summarizer/backend/`:
+All config lives in `blog_summarizer/backend/.env`:
 
-| Variable          | Required | Description                                              |
-|-------------------|----------|----------------------------------------------------------|
-| `GEMINI_API_KEY`  | ✅ Yes    | Your Google Gemini API key from [AI Studio](https://aistudio.google.com/apikey) |
-| `TELEGRAM_BOT_TOKEN` | ❌ Optional | Your Telegram Bot token from [@BotFather](https://t.me/BotFather). Only needed for Telegram integration. |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GROQ_API_KEY` | ✅ | Free key from [console.groq.com/keys](https://console.groq.com/keys) |
+| `TELEGRAM_BOT_TOKEN` | ❌ | From [@BotFather](https://t.me/BotFather) — only for Telegram integration |
 
-> **SQLite** is used for storage (zero config). Whisper models download automatically on first use.
-
----
-
-## 🛡️ Security Notes
-
-- **`.env` is git-ignored** — Your API key will never be committed or pushed.
-- **`.env.example`** is provided as a safe template with placeholder values.
-- **Database files (`*.db`)** are git-ignored — your personal data stays local.
-- The application runs entirely on `localhost` — no external services receive your data except the Gemini API for summarization.
+> SQLite needs zero config. Whisper models download on first use.
 
 ---
 
 ## 🐛 Troubleshooting
 
 | Issue | Solution |
-|-------|---------|
-| `ModuleNotFoundError` | Run `pip install -r requirements.txt` again |
-| `ffmpeg not found` | Install ffmpeg: `brew install ffmpeg` (macOS) or `sudo apt install ffmpeg` (Linux) |
-| `GEMINI_API_KEY not set` | Create `.env` file with your key (see step 3 above) |
-| Port 8000 already in use | Kill existing process: `lsof -ti:8000 \| xargs kill -9` |
-| Whisper model download slow | First run downloads ~140 MB model. This is a one-time download. |
-| Instagram/YouTube download fails | Ensure `yt-dlp` is up to date: `pip install --upgrade yt-dlp` |
+|-------|----------|
+| `ModuleNotFoundError` | `pip install -r requirements.txt` |
+| `ffmpeg not found` | `brew install ffmpeg` / `sudo apt install ffmpeg` |
+| `GROQ_API_KEY not set` | Create `.env` (step 3) |
+| Port 8000 in use | `lsof -ti:8000 \| xargs kill -9` |
+| Telegram bot silent | Another instance (e.g. a Render deploy) may own the webhook — the local server clears it on startup; restart the server |
+| Instagram/YouTube download fails | `pip install --upgrade yt-dlp` |
 
 ---
 
 ## 📝 License
 
-MIT License — Free for personal and commercial use.
+MIT — free for personal and commercial use.
 
 ---
 
