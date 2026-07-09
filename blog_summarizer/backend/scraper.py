@@ -2,7 +2,6 @@
 Web scraper for extracting article content from blog URLs.
 """
 
-import re
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
@@ -122,7 +121,7 @@ def scrape_article(url: str) -> dict:
         raise TimeoutError(f"Request timed out after {REQUEST_TIMEOUT}s: {url}")
     except requests.exceptions.ConnectionError:
         raise ConnectionError(f"Could not connect to: {url}")
-    except requests.exceptions.HTTPError as e:
+    except requests.exceptions.HTTPError:
         raise ConnectionError(f"HTTP error {response.status_code}: {url}")
 
     # Parse HTML

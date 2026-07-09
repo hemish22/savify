@@ -47,7 +47,7 @@ def transcribe_audio(audio_path: str) -> dict:
     try:
         model = _get_model()
 
-        print(f"🎙️ Transcribing audio with faster-whisper...")
+        print("🎙️ Transcribing audio with faster-whisper...")
         segments, info = model.transcribe(
             audio_path,
             beam_size=1,         # Greedy decoding = fastest

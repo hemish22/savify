@@ -1,28 +1,30 @@
 """
-Gemini API integration for blog summarization.
+Groq API integration for blog summarization.
+Uses OpenAI-compatible chat completions endpoint with openai/gpt-oss-120b.
 """
 
 import os
 import json
-import google.generativeai as genai
+import re as _re
+
+import requests
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Configure Gemini API
-API_KEY = os.getenv("GEMINI_API_KEY")
+API_KEY = os.getenv("GROQ_API_KEY")
 if not API_KEY:
     raise EnvironmentError(
-        "GEMINI_API_KEY environment variable is not set. "
+        "GROQ_API_KEY environment variable is not set. "
         "Create a .env file in the backend/ directory with:\n"
-        "GEMINI_API_KEY=your_api_key_here"
+        "GROQ_API_KEY=your_api_key_here\n"
+        "Get a free key at https://console.groq.com/keys"
     )
 
-genai.configure(api_key=API_KEY)
-
-# Use Gemini 2.5 Flash for speed and quality
-MODEL_NAME = "gemini-2.5-flash"
+GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+MODEL_NAME = "openai/gpt-oss-120b"
+REQUEST_TIMEOUT = 60  # seconds
 
 SUMMARIZATION_PROMPT = """You are an expert blog summarizer. Analyze the following blog article and return a structured JSON summary.
 
@@ -77,9 +79,6 @@ Rules:
 VIDEO TRANSCRIPT:
 {transcript_text}
 """
-
-
-import re as _re
 
 
 def _parse_json_robust(text: str) -> dict:
@@ -150,30 +149,44 @@ def _parse_json_robust(text: str) -> dict:
     # Validate we got at least a title or summary or key points
     if result["title"] == "Untitled" and result["summary"] == text[:300] and result.get("key_points") == ["See summary above"]:
         raise RuntimeError(
-            f"Gemini returned unparseable response:\n{text[:500]}"
+            f"LLM returned unparseable response:\n{text[:500]}"
         )
 
     return result
 
 
-def _call_gemini(prompt: str) -> dict:
+def _call_llm(prompt: str) -> dict:
     """
-    Send a prompt to Gemini and parse the JSON response.
+    Send a prompt to Groq and parse the JSON response.
     Shared by both blog and YouTube summarization.
     """
     try:
-        model = genai.GenerativeModel(MODEL_NAME)
-
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
-                temperature=0.3,
-                max_output_tokens=1024,
-            ),
+        response = requests.post(
+            GROQ_API_URL,
+            headers={
+                "Authorization": f"Bearer {API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": MODEL_NAME,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.3,
+                "max_completion_tokens": 2048,
+                "reasoning_effort": "low",
+                "response_format": {"type": "json_object"},
+            },
+            timeout=REQUEST_TIMEOUT,
         )
 
-        # Extract text from response
-        response_text = response.text.strip()
+        if response.status_code == 401:
+            raise RuntimeError("Invalid Groq API key. Please check your GROQ_API_KEY.")
+        if response.status_code == 429:
+            raise RuntimeError("Groq rate limit hit. Wait a moment and try again.")
+        if response.status_code != 200:
+            detail = response.text[:300]
+            raise RuntimeError(f"Groq API error {response.status_code}: {detail}")
+
+        response_text = response.json()["choices"][0]["message"]["content"].strip()
 
         # Clean potential markdown code fences
         if response_text.startswith("```"):
@@ -182,38 +195,33 @@ def _call_gemini(prompt: str) -> dict:
             response_text = "\n".join(lines).strip()
 
         # Parse JSON — with robust recovery for truncated responses
-        result = _parse_json_robust(response_text)
-        return result
+        return _parse_json_robust(response_text)
 
-    except genai.types.BlockedPromptException:
-        raise RuntimeError(
-            "The content was blocked by Gemini's safety filters."
-        )
+    except requests.exceptions.Timeout:
+        raise RuntimeError(f"Groq API request timed out after {REQUEST_TIMEOUT}s.")
+    except requests.exceptions.ConnectionError:
+        raise RuntimeError("Could not connect to Groq API. Check your internet connection.")
+    except RuntimeError:
+        raise
     except Exception as e:
-        if "API key" in str(e).lower():
-            raise RuntimeError(
-                "Invalid Gemini API key. Please check your GEMINI_API_KEY."
-            )
-        if isinstance(e, RuntimeError):
-            raise
-        raise RuntimeError(f"Gemini API error: {str(e)}")
+        raise RuntimeError(f"Groq API error: {str(e)}")
 
 
 def summarize_text(text: str) -> dict:
     """
-    Send article text to Gemini API and get a structured summary.
+    Send article text to Groq and get a structured summary.
 
     Returns:
-        dict with keys: title, summary, key_points, difficulty, takeaway
+        dict with keys: title, summary, key_points, difficulty, category, takeaway
     """
     prompt = SUMMARIZATION_PROMPT.format(article_text=text)
-    result = _call_gemini(prompt)
+    result = _call_llm(prompt)
 
     # Validate required fields
     required_fields = ["title", "summary", "key_points", "difficulty", "category", "takeaway"]
     for field in required_fields:
         if field not in result:
-            raise RuntimeError(f"Gemini response missing required field: {field}")
+            raise RuntimeError(f"LLM response missing required field: {field}")
 
     # Ensure key_points is a list
     if not isinstance(result["key_points"], list):
@@ -223,7 +231,7 @@ def summarize_text(text: str) -> dict:
     valid_difficulties = ["Beginner", "Intermediate", "Advanced"]
     if result["difficulty"] not in valid_difficulties:
         result["difficulty"] = "Intermediate"
-    
+
     valid_categories = ["AI", "Web Dev", "ML", "Cybersecurity", "General"]
     if result["category"] not in valid_categories:
         result["category"] = "General"
@@ -233,19 +241,19 @@ def summarize_text(text: str) -> dict:
 
 def summarize_youtube(transcript_text: str) -> dict:
     """
-    Send YouTube transcript to Gemini API and get a structured summary.
+    Send video transcript to Groq and get a structured summary.
 
     Returns:
-        dict with keys: title, summary, key_points, difficulty, takeaway, tools_mentioned
+        dict with keys: title, summary, key_points, difficulty, category, takeaway, tools_mentioned
     """
     prompt = YOUTUBE_SUMMARIZATION_PROMPT.format(transcript_text=transcript_text)
-    result = _call_gemini(prompt)
+    result = _call_llm(prompt)
 
     # Validate required fields
     required_fields = ["title", "summary", "key_points", "difficulty", "category", "takeaway"]
     for field in required_fields:
         if field not in result:
-            raise RuntimeError(f"Gemini response missing required field: {field}")
+            raise RuntimeError(f"LLM response missing required field: {field}")
 
     # Ensure key_points is a list
     if not isinstance(result["key_points"], list):
@@ -267,4 +275,3 @@ def summarize_youtube(transcript_text: str) -> dict:
         result["category"] = "General"
 
     return result
-

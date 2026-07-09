@@ -16,29 +16,34 @@ from fastapi.responses import FileResponse, StreamingResponse
 from models import SummarizeRequest, SummaryResponse
 from database import init_db, save_summary, get_all_summaries, delete_summary, update_favorite, update_summary_text
 from scraper import scrape_article
-from gemini_service import summarize_text, summarize_youtube
-from youtube_service import is_youtube_url, fetch_transcript, extract_video_id, _fetch_via_api, _fetch_via_whisper
-from instagram_service import is_instagram_url, fetch_instagram_transcript, extract_post_id
+from llm_service import summarize_text, summarize_youtube
+from youtube_service import is_youtube_url, fetch_transcript, extract_video_id, _fetch_via_api
+from instagram_service import is_instagram_url, fetch_instagram_transcript
 from audio_service import download_audio, cleanup_audio
 from whisper_service import transcribe_audio
 from transcript_cleaner import clean_transcript
 from telegram_service import (
     extract_url_from_text, format_summary_for_telegram,
     send_telegram_message, send_typing_action,
-    register_webhook, get_bot_info,
+    register_webhook, delete_webhook, poll_updates, get_bot_info,
 )
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialize database on startup and auto-register Telegram webhook on Render."""
+    """
+    Initialize database on startup.
+    Telegram: webhook mode on Render (public URL), getUpdates polling locally.
+    """
     init_db()
     print("✅ Database initialized")
 
-    # Auto-register Telegram webhook on Render (RENDER_EXTERNAL_URL is set automatically)
     render_url = os.getenv("RENDER_EXTERNAL_URL", "")
     telegram_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    polling_task = None
+
     if render_url and telegram_token:
+        # Render: RENDER_EXTERNAL_URL is set automatically — use webhook
         webhook_url = f"{render_url}/telegram-webhook"
         try:
             result = await register_webhook(webhook_url)
@@ -46,8 +51,18 @@ async def lifespan(app: FastAPI):
             print(f"   Result: {result}")
         except Exception as e:
             print(f"⚠️ Telegram webhook auto-registration failed: {e}")
+    elif telegram_token:
+        # Local: no public URL — remove any stale webhook and long-poll instead
+        try:
+            await delete_webhook()
+            polling_task = asyncio.create_task(poll_updates(_handle_telegram_message))
+        except Exception as e:
+            print(f"⚠️ Telegram polling setup failed: {e}")
 
     yield
+
+    if polling_task:
+        polling_task.cancel()
 
 
 app = FastAPI(
@@ -162,7 +177,6 @@ async def summarize_stream(request: SummarizeRequest):
                 if api_result is not None:
                     # Fast path: API transcript available
                     text = api_result["text"]
-                    language = api_result["language"]
                     yield sse_event({"step": "transcript", "status": "done", "message": "✅ Transcript fetched via API"})
                 else:
                     # Slow path: Whisper fallback
@@ -179,7 +193,6 @@ async def summarize_stream(request: SummarizeRequest):
 
                     yield sse_event({"step": "clean", "status": "active", "message": "🧹 Cleaning transcript..."})
                     text = clean_transcript(whisper_result["text"])
-                    language = whisper_result["language"]
                     yield sse_event({"step": "clean", "status": "done", "message": "✅ Transcript cleaned"})
 
                 # Truncate
@@ -308,8 +321,8 @@ async def summarize_url(request: SummarizeRequest):
     try:
         row_id = save_summary(result)
         result["id"] = row_id
-    except Exception as e:
-        result["id"] = None if "UNIQUE" in str(e) else None
+    except Exception:
+        result["id"] = None
 
     return result
 
@@ -435,25 +448,24 @@ async def _process_telegram_url(chat_id: int, url: str):
         )
 
 
-@app.post("/telegram-webhook")
-async def telegram_webhook(request: Request):
+async def _handle_telegram_message(message: dict):
     """
-    Receive messages from Telegram Bot API.
-    Returns immediately to prevent Telegram retries, then processes in background.
+    Handle one incoming Telegram message.
+    Shared by the webhook endpoint (Render) and the polling loop (local).
     """
-    data = await request.json()
-    message = data.get("message", {})
     chat_id = message.get("chat", {}).get("id")
     text = message.get("text", "")
     message_id = message.get("message_id")
     user_first_name = message.get("from", {}).get("first_name", "there")
 
     if not chat_id:
-        return {"ok": True}
+        return
+
+    print(f"💬 Telegram message from chat_id={chat_id}: {text[:80]!r}")
 
     # ── Dedup: skip if we already processed this exact message ──
     if message_id and message_id in _processed_messages:
-        return {"ok": True}
+        return
     if message_id:
         _processed_messages.add(message_id)
         # Prevent memory leak: trim the set if it gets too large
@@ -472,7 +484,7 @@ async def telegram_webhook(request: Request):
             "Just paste a URL and I'll handle the rest\\!"
         )
         await send_telegram_message(chat_id, welcome)
-        return {"ok": True}
+        return
 
     # Handle /help command
     if text.strip() == "/help":
@@ -484,7 +496,7 @@ async def telegram_webhook(request: Request):
             "Just paste a link and I'll do the rest\\!"
         )
         await send_telegram_message(chat_id, help_text)
-        return {"ok": True}
+        return
 
     # Extract URL from message
     url = extract_url_from_text(text)
@@ -493,7 +505,7 @@ async def telegram_webhook(request: Request):
             chat_id,
             "🤔 I didn't find a URL in your message\\.\n\nSend me a blog, YouTube, or Instagram link to summarize\\!"
         )
-        return {"ok": True}
+        return
 
     # Acknowledge receipt immediately
     await send_telegram_message(
@@ -501,10 +513,19 @@ async def telegram_webhook(request: Request):
         "⚡ Got it\\! Processing your link\\.\\.\\."
     )
 
-    # ── Fire-and-forget: process in background so Telegram doesn't retry ──
+    # ── Fire-and-forget: process in background ──
     asyncio.create_task(_process_telegram_url(chat_id, url))
 
-    # Return immediately — Telegram won't retry
+
+@app.post("/telegram-webhook")
+async def telegram_webhook(request: Request):
+    """
+    Receive messages from Telegram Bot API (webhook mode, used on Render).
+    Returns immediately to prevent Telegram retries, then processes in background.
+    """
+    data = await request.json()
+    message = data.get("message", {})
+    asyncio.create_task(_handle_telegram_message(message))
     return {"ok": True}
 
 

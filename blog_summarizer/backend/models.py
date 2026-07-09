@@ -2,7 +2,7 @@
 Pydantic models for Blog Summarizer.
 """
 
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel
 from typing import List, Optional
 
 

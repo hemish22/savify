@@ -8,7 +8,7 @@ services:
     dockerfilePath: ./Dockerfile
     plan: free
     envVars:
-      - key: GEMINI_API_KEY
+      - key: GROQ_API_KEY
         sync: false   # You must set this manually in Render dashboard
       - key: TELEGRAM_BOT_TOKEN
         sync: false   # You must set this manually in Render dashboard
