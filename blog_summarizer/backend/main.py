@@ -1,5 +1,5 @@
 """
-FastAPI application for Blog Summarizer.
+FastAPI application for Savify.
 Supports Blog, YouTube, and Instagram URL summarization with real-time progress.
 Includes Telegram Bot webhook for mobile ingestion.
 """
@@ -66,7 +66,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Blog Summarizer",
+    title="Savify",
     description="Paste a blog, YouTube, or Instagram URL — get a structured AI summary with real-time progress.",
     version="1.3.0",
     lifespan=lifespan,
@@ -476,7 +476,7 @@ async def _handle_telegram_message(message: dict):
     if text.strip() == "/start":
         welcome = (
             f"👋 Hey {user_first_name}\\!\n\n"
-            "I'm your *AI Knowledge Base Bot*\\.\n\n"
+            "I'm *Savify* — your AI knowledge base bot\\.\n\n"
             "Send me any link and I'll summarize it:\n"
             "  📝 Blog articles\n"
             "  🎬 YouTube videos\n"

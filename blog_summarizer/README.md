@@ -1,4 +1,4 @@
-# Blog Summarizer 📝
+# Savify 📝
 
 Paste a blog URL and get a structured AI-powered summary in seconds.
 

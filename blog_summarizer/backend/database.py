@@ -1,5 +1,5 @@
 """
-SQLite database operations for Blog Summarizer.
+SQLite database operations for Savify.
 """
 
 import sqlite3

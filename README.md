@@ -1,4 +1,4 @@
-# Reelist — Insta Reel, YouTube & Blog Summarizer
+# Savify — AI Summaries for Reels, Videos & Blogs
 
 > **Stop hoarding tabs and saved reels you'll never rewatch.**
 
@@ -64,8 +64,8 @@ You know the drill: 47 open tabs, 200 saved Instagram reels, a YouTube "Watch La
 ### 1. Clone
 
 ```bash
-git clone https://github.com/hemish22/insta-reel-shorts-blogs-summariser-.git
-cd insta-reel-shorts-blogs-summariser-
+git clone https://github.com/hemish22/savify.git
+cd savify
 ```
 
 ### 2. Install dependencies
@@ -127,7 +127,7 @@ The server auto-detects local mode and uses **long-polling**: no public URL, no 
 ## Project Structure
 
 ```
-insta-reel-shorts-blogs-summariser-/
+savify/
 ├── blog_summarizer/
 │   ├── backend/
 │   │   ├── main.py                 # FastAPI app, routes, SSE streaming, Telegram handling

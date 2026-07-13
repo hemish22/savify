@@ -1,5 +1,5 @@
 """
-Pydantic models for Blog Summarizer.
+Pydantic models for Savify.
 """
 
 from pydantic import BaseModel

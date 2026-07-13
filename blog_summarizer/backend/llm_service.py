@@ -1,5 +1,5 @@
 """
-Groq API integration for blog summarization.
+Groq API integration for Savify summarization.
 Uses OpenAI-compatible chat completions endpoint with openai/gpt-oss-120b.
 """
 
